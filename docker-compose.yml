@@ -47,7 +47,7 @@ services:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
     env_file:
       - ./hadoop.env
-  
+
   historyserver:
     image: bde2020/hadoop-historyserver:latest
     container_name: historyserver
@@ -60,7 +60,28 @@ services:
       - hadoop_historyserver:/hadoop/yarn/timeline
     env_file:
       - ./hadoop.env
-      
+
+  hive-metastore:
+    image: bde2020/hive:latest
+    container_name: hive-metastore
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 namenode:9000 datanode:9864"
+    ports:
+      - 9083:9083
+    env_file:
+      - ./hadoop.env
+
+  hive-server:
+    image: bde2020/hive:latest
+    container_name: hive-server
+    env_file:
+      - ./hadoop.env
+    environment:
+      SERVICE_PRECONDITION: "hive-metastore:9083"
+    ports:
+      - 10000:10000
+      - 10002:10002
+
 volumes:
   hadoop_namenode:
   hadoop_datanode:
