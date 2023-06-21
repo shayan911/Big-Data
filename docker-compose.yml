@@ -34,8 +34,6 @@ services:
     image: bde2020/hadoop-nodemanager:latest
     container_name: nodemanager
     restart: on-failure:3
-    ports:
-      - 8042:8042
     environment:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
     networks: 
@@ -47,8 +45,6 @@ services:
     image: bde2020/hadoop-historyserver:latest
     container_name: historyserver
     restart: on-failure:3
-    ports:
-      - 8188:8188
     environment:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
     networks: 
@@ -72,6 +68,41 @@ services:
       - ./hadoop.env
     volumes:
       - ${PWD}/opt/hue_conf/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+
+  hive-server:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: hive-server
+    env_file:
+      - ./hadoop.env
+    environment:
+      HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hive-metastore/metastore"
+      SERVICE_PRECONDITION: "hive-metastore:9083"
+    networks: 
+      - hadoop
+    ports:
+      - "10000:10000"
+    # volumes:
+      # - ${PWD}/opt/hive_conf/hive-default.xml.template:/opt/hive/conf/hive-default.xml.template
+
+  hive-metastore:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: hive-metastore
+    restart: on-failure:3
+    env_file:
+      - ./hadoop.env
+    command: /opt/hive/bin/hive --service metastore
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 datanode:9864 hive-metastore-postgresql:5432"
+    networks: 
+      - hadoop
+    ports:
+      - "9083:9083"
+    
+  hive-metastore-postgresql:
+    image: bde2020/hive-metastore-postgresql:2.3.0
+    container_name: hive-metastore-postgresql
+    networks: 
+      - hadoop
 
 networks:
   hadoop:
