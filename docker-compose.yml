@@ -59,15 +59,19 @@ services:
       - ./hadoop.env
 
   filebrowser:
-    image: bde2020/hdfs-filebrowser:latest
+    image: gethue/hue:latest
     container_name: filebrowser
     restart: on-failure:3
     ports:
-      - 8087:8088
-    networks: 
+      - 8888:8888
+    environment:
+      - NAMENODE_HOST=namenode
+    networks:
       - hadoop
     env_file:
       - ./hadoop.env
+    volumes:
+      - /home/handrahilman/Big-Data/opt/hue_conf/hue.ini:/usr/share/hue/desktop/conf/hue.ini
 
 networks:
   hadoop:
