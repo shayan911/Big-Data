@@ -71,7 +71,7 @@ services:
     env_file:
       - ./hadoop.env
     volumes:
-      - /home/handrahilman/Big-Data/opt/hue_conf/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+      - ${PWD}/opt/hue_conf/hue.ini:/usr/share/hue/desktop/conf/hue.ini
 
 networks:
   hadoop:
