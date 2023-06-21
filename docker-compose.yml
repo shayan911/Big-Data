@@ -10,6 +10,8 @@ services:
       - hadoop_namenode:/hadoop/dfs/name
     environment:
       - CLUSTER_NAME=testing
+    networks: 
+      - hadoop
     env_file:
       - ./hadoop.env
 
@@ -23,17 +25,8 @@ services:
       - 9864:9864
     environment:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870"
-    env_file:
-      - ./hadoop.env
-
-  resourcemanager:
-    image: bde2020/hadoop-resourcemanager:latest
-    container_name: resourcemanager
-    restart: on-failure:3
-    ports:
-      - 8088:8088
-    environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
+    networks: 
+      - hadoop
     env_file:
       - ./hadoop.env
 
@@ -45,6 +38,8 @@ services:
       - 8042:8042
     environment:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    networks: 
+      - hadoop
     env_file:
       - ./hadoop.env
   
@@ -56,10 +51,31 @@ services:
       - 8188:8188
     environment:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    networks: 
+      - hadoop
     volumes:
       - hadoop_historyserver:/hadoop/yarn/timeline
     env_file:
       - ./hadoop.env
+
+  filebrowser:
+    image: gethue/hue:latest
+    container_name: filebrowser
+    restart: on-failure:3
+    ports:
+      - 8888:8888
+    environment:
+      - NAMENODE_HOST=namenode
+    networks:
+      - hadoop
+    env_file:
+      - ./hadoop.env
+    volumes:
+      - /home/handrahilman/Big-Data/opt/hue_conf/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+
+networks:
+  hadoop:
+    driver: bridge
       
 volumes:
   hadoop_namenode:
