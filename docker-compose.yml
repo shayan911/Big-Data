@@ -59,8 +59,8 @@ services:
       - hadoop
     ports:
       - 10000:10000
-    volumes:
-      - ${PWD}/opt/hive_conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+    # volumes:
+      # - ${PWD}/opt/hive_conf/hive-site.xml:/opt/hive/conf/hive-site.xml
 
   hive-metastore:
     image: bde2020/hive:2.3.2-postgresql-metastore
