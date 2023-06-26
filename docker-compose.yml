@@ -1,114 +1,109 @@
+version: "3"
+
 services:
   namenode:
-    image: bde2020/hadoop-namenode:latest
+    image: bde2020/hadoop-namenode:2.0.0-hadoop2.7.4-java8
     container_name: namenode
-    restart: on-failure:3
-    ports:
-      - 9870:9870
-      - 9000:9000
+    restart: always
     volumes:
-      - hadoop_namenode:/hadoop/dfs/name
+      - namenode:/hadoop/dfs/name
     environment:
-      - CLUSTER_NAME=testing
+      - CLUSTER_NAME=test
+    # command: hdfs dfs -chown hdfs /
     networks: 
       - hadoop
-    env_file:
+    env_file: 
       - ./hadoop.env
+    ports:
+      - 50070:50070
 
   datanode:
-    image: bde2020/hadoop-datanode:latest
+    image: bde2020/hadoop-datanode:2.0.0-hadoop2.7.4-java8
     container_name: datanode
-    restart: on-failure:3
+    restart: always
     volumes:
-      - hadoop_datanode:/hadoop/dfs/data
+      - datanode:/hadoop/dfs/data
+    env_file:
+      - ./hadoop.env
+    environment:
+      SERVICE_PRECONDITION: "namenode:50070"
+    networks: 
+      - hadoop
     ports:
-      - 9864:9864
-    environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870"
-    networks: 
-      - hadoop
-    env_file:
-      - ./hadoop.env
+      - 50075:50075
 
-  nodemanager:
-    image: bde2020/hadoop-nodemanager:latest
-    container_name: nodemanager
-    restart: on-failure:3
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    restart: always
     environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+      SERVICE_PRECONDITION: "namenode:50070 datanode:50075"
     networks: 
       - hadoop
     env_file:
       - ./hadoop.env
-  
-  historyserver:
-    image: bde2020/hadoop-historyserver:latest
-    container_name: historyserver
-    restart: on-failure:3
-    environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
-    networks: 
-      - hadoop
-    volumes:
-      - hadoop_historyserver:/hadoop/yarn/timeline
-    env_file:
-      - ./hadoop.env
-
-  filebrowser:
-    image: gethue/hue:latest
-    container_name: filebrowser
-    restart: on-failure:3
-    ports:
-      - 8888:8888
-    environment:
-      - NAMENODE_HOST=namenode
-    networks:
-      - hadoop
-    env_file:
-      - ./hadoop.env
-    volumes:
-      - ${PWD}/opt/hue_conf/hue.ini:/usr/share/hue/desktop/conf/hue.ini
 
   hive-server:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile-hue
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-server
+    restart: always
     env_file:
       - ./hadoop.env
+    command: hive --service hiveserver2
     environment:
-      HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hive-metastore/metastore"
       SERVICE_PRECONDITION: "hive-metastore:9083"
     networks: 
       - hadoop
     ports:
-      - "10000:10000"
-    # volumes:
-      # - ${PWD}/opt/hive_conf/hive-default.xml.template:/opt/hive/conf/hive-default.xml.template
+      - 10000:10000
+    volumes:
+      - ${PWD}/opt/hive_conf/hive-site.xml:/opt/hive/conf/hive-site.xml
 
   hive-metastore:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-metastore
-    restart: on-failure:3
+    restart: always
     env_file:
       - ./hadoop.env
     command: /opt/hive/bin/hive --service metastore
     environment:
-      SERVICE_PRECONDITION: "namenode:9870 datanode:9864 hive-metastore-postgresql:5432"
+      SERVICE_PRECONDITION: "namenode:50070 datanode:50075 hive-metastore-postgresql:5432"
     networks: 
       - hadoop
     ports:
       - "9083:9083"
-    
+
   hive-metastore-postgresql:
     image: bde2020/hive-metastore-postgresql:2.3.0
-    container_name: hive-metastore-postgresql
     networks: 
       - hadoop
+    ports:
+      - 5432:5432
+
+  hue:
+    image: gethue/hue:latest
+    container_name: hue
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "hive-metastore:9083 hive-server:10000"
+    networks: 
+      - hadoop
+    ports:
+      - 8888:8888
+    volumes:
+      - ${PWD}/opt/hue_conf/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+      - ${PWD}/opt/hue_conf/zoo.cfg:/etc/zookeeper/conf/zoo.cfg
+      - ${PWD}/opt/hue_conf/zookeeper.service:/etc/systemd/system/zookeeper.service
+      - ${PWD}/opt/hue_conf/zoo.cfg:/opt/zookeeper/conf/zoo.cfg
+      - ${PWD}/opt/hue_conf/zoo.cfg:/opt/zookeeper/apache-zookeeper-3.8.1-bin/conf/zoo.cfg
 
 networks:
   hadoop:
     driver: bridge
-      
+
 volumes:
-  hadoop_namenode:
-  hadoop_datanode:
-  hadoop_historyserver:
+  namenode:
+  datanode:
